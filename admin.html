@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><span class="logo">👥</span>TeamPortal</div>
+      <nav><a class="on" href="#">📊 Dashboard</a><a href="#list">🧾 Employees</a></nav>
+      <div class="promo"><b>Admin: Afreen Ahmed</b>
+        <p>Filter, export and download employee photos.</p><button id="out" class="light" hidden>Sign out</button>
+      </div>
+    </aside>
+    <main>
+      <header class="head">
+        <div>
+          <h1 id="hi">Hello! 👋</h1>
+          <p class="sub">Here's what's happening with your team today.</p>
+        </div>
+        <div class="pill"><span class="dot" id="dot"></span>Live</div>
+      </header>
+      <section class="card auth" id="login">
+        <h2>Admin login</h2>
+        <form id="lf" class="fields" style="grid-template-columns:1fr">
+          <label>Email<input id="le" type="email" required></label><label>Password<input id="pw" type="password"
+              required></label><button>Sign in</button><span id="lerr" class="err"></span>
+        </form>
+      </section>
+      <div id="dash" hidden>
+        <div class="stats">
+          <div class="card stat">
+            <div><small>Total employees</small><b id="s1">0</b></div>
+            <div class="tile">👥</div>
+          </div>
+          <div class="card stat">
+            <div><small>Full-time</small><b id="s2">0</b></div>
+            <div class="tile">💼</div>
+          </div>
+          <div class="card stat">
+            <div><small>Internsa</small><b id="s3">0</b></div>
+            <div class="tile">🎓</div>
+          </div>
+          <div class="card stat">
+            <div><small>Hybrid</small><b id="s4">0</b></div>
+            <div class="tile">🏠</div>
+          </div>
+        </div>
+        <section class="card" id="list">
+          <div class="bar">
+            <label>Search<input id="q" placeholder="Name, email, phone"></label>
+            <label>Type<select id="t">
+                <option value="">All</option>
+                <option>Intern</option>
+                <option>Full-time</option>
+              </select></label>
+            <label>Work mode<select id="m">
+                <option value="">All</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="WFO">WFO</option>
+                <option value="WFH">WFH</option>
+              </select></label>
+            <label>Office days<select id="h">
+                <option value="">All</option>
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+              </select></label>
+            <span class="sp"></span><b id="count"></b><button id="exp">⬇ Export CSV</button>
+          </div>
+          <div class="tw">
+            <table>
+              <thead id="th"></thead>
+              <tbody id="tb"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script>
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY), $ = id => document.getElementById(id); let rows = [], all = [], subscribed = false;
+    const COLS = [['name', 'Name'], ['dob', 'DOB'], ['doj', 'DOJ'], ['acc_number', 'Account No.'], ['uan', 'UAN'], ['aadhaar', 'Aadhaar'], ['ifsc', 'IFSC'], ['phone', 'Phone'], ['email', 'Email'], ['emp_type', 'Type'], ['designation', 'Designation'], ['package_amount', 'Package (₹)'], ['fixed_salary', 'Fixed salary (₹)'], ['fixed_salary', 'Fixed salary (₹/month)'], ['resignation_date', 'Resignation date'], ['work_mode', 'Work mode'], ['hybrid_days', 'Office days']];
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const show = on => { $('login').hidden = on; $('dash').hidden = !on; $('out').hidden = !on };
+    $('th').innerHTML = '<tr>' + COLS.map(c => `<th>${c[1]}</th>`).join('') + '<th>Photo</th><th></th></tr>';
+    const h = new Date().getHours(); $('hi').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
+    // async function gate(){
+    //   const{data:{session}}=await sb.auth.getSession();if(!session)return show(false);
+    //   const{data:ok}=await sb.rpc('is_admin');
+    //   if(!ok){await sb.auth.signOut();$('lerr').textContent='This account is not an admin';return show(false)}
+    //   show(true);load();
+    //   if(!subscribed){subscribed=true;sb.channel('emp').on('postgres_changes',{event:'*',schema:'public',table:'employees'},load).subscribe(s=>$('dot').className='dot'+(s==='SUBSCRIBED'?' on':''))}
+    // }
+
+    async function gate() {
+      const {
+        data: { session },
+        error: sessionError
+      } = await sb.auth.getSession();
+
+      if (sessionError) {
+        console.error("Session error:", sessionError);
+        $('lerr').textContent = sessionError.message;
+        show(false);
+        return;
+      }
+
+      if (!session) {
+        show(false);
+        return;
+      }
+
+      console.log("Logged in:", session.user.email);
+
+      const { data: ok, error: adminError } = await sb.rpc('is_admin');
+
+      if (adminError) {
+        console.error("Admin check error:", adminError);
+        $('lerr').textContent = adminError.message;
+        show(false);
+        return;
+      }
+
+      console.log("Is admin:", ok);
+
+      if (!ok) {
+        await sb.auth.signOut();
+        $('lerr').textContent = 'This account is not an admin';
+        show(false);
+        return;
+      }
+
+      console.log("Admin authentication successful");
+
+      show(true);
+
+      await load();
+
+      if (!subscribed) {
+        subscribed = true;
+
+        sb.channel('emp')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'employees'
+            },
+            load
+          )
+          .subscribe(status => {
+            console.log("Realtime:", status);
+
+            $('dot').className =
+              'dot' + (status === 'SUBSCRIBED' ? ' on' : '');
+          });
+      }
+    }
+    $('lf').onsubmit = async e => {
+  e.preventDefault();
+
+  const email = $('le').value.trim().toLowerCase();
+  const password = $('pw').value;
+
+  console.log("EMAIL:", email);
+  console.log("PASSWORD LENGTH:", password.length);
+
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
+
+  console.log("AUTH DATA:", data);
+  console.log("AUTH ERROR:", error);
+
+  if (error) {
+    $('lerr').textContent = error.message;
+    return;
+  }
+
+  $('lerr').textContent = '';
+
+  console.log("LOGIN SUCCESS");
+  await gate();
+};
+// $('lf').onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.signInWithPassword({ email: $('le').value, password: $('pw').value }); if (error) return $('lerr').textContent = error.message; $('lerr').textContent = ''; gate() };
+    $('out').onclick = async () => { await sb.auth.signOut(); show(false) };
+    // async function load(){const{data}=await sb.from('employees').select('*').order('created_at',{ascending:false});
+    //   all=data||[];const seen=new Set();rows=all.filter(r=>!seen.has(r.email)&&seen.add(r.email));draw()}
+    // const filtered=()=>{const q=$('q').value.toLowerCase(),t=$('t').value,m=$('m').value,d=$('h').value;
+    //   return rows.filter(r=>(!t||r.emp_type===t)&&(!m||r.work_mode===m)&&(!d||String(r.hybrid_days)===d)&&(!q||((r.name||'')+r.email+(r.phone||'')).toLowerCase().includes(q)))};
+
+    async function load() {
+      const {
+        data,
+        error
+      } = await sb
+        .from('employees')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Employees query error:", error);
+        $('lerr').textContent = error.message;
+        return;
+      }
+
+      all = data || [];
+
+      const seen = new Set();
+
+      rows = all.filter(r => {
+        if (seen.has(r.email)) return false;
+        seen.add(r.email);
+        return true;
+      });
+
+      draw();
+    }
+
+    function draw() {
+      const fr = filtered(); $('count').textContent = fr.length + ' of ' + rows.length;
+      $('s1').textContent = rows.length; $('s2').textContent = rows.filter(r => r.emp_type === 'Full-time').length;
+      $('s3').textContent = rows.filter(r => r.emp_type === 'Intern').length; $('s4').textContent = rows.filter(r => r.work_mode === 'Hybrid').length;
+      $('tb').innerHTML = fr.map(r => '<tr>' + COLS.map(([k]) => `<td>${esc(r[k])}</td>`).join('') +
+        `<td>${r.photo_path ? `<button class="soft" data-dl="${r.id}">⬇ Download</button>` : '—'}</td><td><button class="danger" data-del="${r.id}">Delete</button></td></tr>`).join('');
+    }
+    ['q', 't', 'm', 'h'].forEach(i => $(i).oninput = draw);
+    $('tb').onclick = async e => {
+      const dl = e.target.dataset.dl, del = e.target.dataset.del;
+      if (dl) {
+        const r = rows.find(x => x.id === dl), ext = r.photo_path.split('.').pop();
+        const { data, error } = await sb.storage.from('photos').createSignedUrl(r.photo_path, 60, { download: `${r.name || 'employee'}.${ext}` });
+        if (error) return alert(error.message); const a = document.createElement('a'); a.href = data.signedUrl; a.click()
+      }
+      if (del && confirm('Delete this employee and their photo?')) {
+        const r = rows.find(x => x.id === del);
+        const paths = all.filter(x => x.email === r.email && x.photo_path).map(x => x.photo_path);
+        if (paths.length) await sb.storage.from('photos').remove(paths); await sb.from('employees').delete().eq('email', r.email); load()
+      }
+    };
+    $('exp').onclick = () => {
+      const txt = ['acc_number', 'uan', 'aadhaar', 'phone'];
+      const q = v => { v = String(v ?? ''); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"' };
+      const lines = [COLS.map(c => q(c[1])).join(',')].concat(filtered().map(r => COLS.map(([k]) => txt.includes(k) ? '="' + (r[k] || '') + '"' : q(r[k])).join(',')));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv' })); a.download = 'employees.csv'; a.click()
+    };
+    gate();
+  </script>
+<script>
+document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{
+  e.preventDefault();
+  document.querySelectorAll('nav a').forEach(x=>x.classList.remove('on'));a.classList.add('on');
+  const id=a.getAttribute('href').slice(1),t=id&&document.getElementById(id);
+  if(t){t.scrollIntoView({behavior:'smooth',block:'start'});t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash')}
+  else window.scrollTo({top:0,behavior:'smooth'});
+}));
+</script>
+</body>
+
+</html>

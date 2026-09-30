@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Team Portal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><span class="logo">👥</span>TeamPortal</div>
+      <nav><a class="on" href="#">🏠 My Details</a><a href="#photo">📷 Photo</a><a href="#work">💼 Work</a><a
+          href="#bank">🏦 Bank &amp; IDs</a></nav>
+      <div class="promo"><b>No login needed ✨</b>
+        <p>Fill in your details and submit. Only HR can see them.</p>
+      </div>
+    </aside>
+    <main>
+      <header class="head">
+        <div>
+          <h1 id="hi">Hello! 👋</h1>
+          <p class="sub">Fill in your details below. Submitting again with the same email replaces your earlier entry.
+          </p>
+        </div>
+      </header>
+      <form id="form">
+        <div class="cards">
+          <section class="card" id="photo">
+            <h2>📷 Profile photo</h2>
+            <div class="photo">
+              <div class="av" id="av">🙂</div>
+              <label>Upload photo (JPG/PNG/WebP, max 2 MB)<input id="photoIn" type="file"
+                  accept="image/jpeg,image/png,image/webp"></label>
+            </div>
+          </section>
+          <section class="card">
+            <h2>🧑 Personal</h2>
+            <div class="fields">
+              <label>Full name<input id="name" required></label><label>Date of birth<input id="dob" type="date"
+                  required></label>
+              <label>Phone<input id="phone" inputmode="numeric" pattern="\d{10}" maxlength="10" required></label>
+              <label>Email<input id="email" type="email" required></label>
+            </div>
+          </section>
+        </div>
+        <div class="cards">
+          <section class="card" id="bank">
+            <h2>🏦 Bank &amp; IDs</h2>
+            <div class="fields">
+              <label>Account number<input id="acc_number" inputmode="numeric" pattern="\d{9,18}" required></label>
+              <label>IFSC code<input id="ifsc" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" maxlength="11" required></label>
+              <label>UAN number<input id="uan" inputmode="numeric" pattern="\d{12}" maxlength="12" required></label>
+              <label>Aadhaar number<input id="aadhaar" inputmode="numeric" pattern="\d{12}" maxlength="12" required></label>
+            </div>
+          </section>
+          <section class="card" id="work">
+            <h2>💼 Work</h2>
+            <div class="fields">
+              <label>Date of joining<input id="doj" type="date" required></label>
+              <label>Resignation date (if resigned)<input id="resignation_date" type="date"></label>
+              <label>Designation<input id="designation" required></label>
+              <label>Package / CTC (₹ per year)<input id="package_amount" type="number" min="0" step="0.01" required></label>
+              <!-- <label>Fixed salary (₹ per month)<input id="fixed_salary" type="number" min="0" step="0.01" required></label>
+              <label>Fixed salary (₹ per month)<input id="fixed_salary" type="number" min="0" step="0.01" required></label>  -->
+              <label>Employment type<select id="emp_type" required>
+                  <option value="">Select</option>
+                  <option>Intern</option>
+                  <option>Full-time</option>
+                </select></label>
+              <label>Work mode<select id="work_mode" required>
+                  <option value="">Select</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="WFO">Work from office</option>
+                  <option value="WFH">Work from home</option>
+                </select></label>
+              <label id="hd">Working days in office / week (Hybrid)<select id="hybrid_days"><option value="">Select</option>
+                  <option>1</option>
+                  <option>2</option>
+                  <option>3</option>
+                  <option>4</option>
+                  <option>5</option>
+                </select></label>
+            </div>
+          </section>
+        </div>
+        <button id="go">Submit details</button> <span id="msg"></span>
+      </form>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script>
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY), $ = id => document.getElementById(id);
+    const FIELDS = ['name', 'dob', 'doj', 'phone', 'email', 'acc_number', 'ifsc', 'uan', 'aadhaar', 'designation', 'package_amount', 'fixed_salary', 'fixed_salary', 'resignation_date', 'emp_type', 'work_mode', 'hybrid_days'];
+    const msg = (t, ok) => { $('msg').textContent = t; $('msg').className = ok ? 'ok' : 'err' };
+    const h = new Date().getHours(); $('hi').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
+    const toggle = () => { $('hybrid_days').required = $('work_mode').value === 'Hybrid' }; $('work_mode').onchange = toggle;
+    const resetAv = () => { $('av').style.backgroundImage = ''; $('av').textContent = '🙂' };
+    $('photoIn').onchange = e => { const f = e.target.files[0]; if (f) { $('av').style.backgroundImage = `url(${URL.createObjectURL(f)})`; $('av').textContent = '' } };
+    $('form').onsubmit = async e => {
+      e.preventDefault(); $('go').disabled = true; msg('Submitting…', 1);
+      try {
+        const row = {}; FIELDS.forEach(k => row[k] = $(k).value.trim() || null); row.package_amount = +row.package_amount; row.fixed_salary = +row.fixed_salary; row.fixed_salary = +row.fixed_salary;
+        row.email = row.email.toLowerCase(); row.ifsc = row.ifsc.toUpperCase();
+        row.hybrid_days = row.work_mode === 'Hybrid' ? +row.hybrid_days : null;
+        const f = $('photoIn').files[0];
+        if (f) {
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type) || f.size > 2097152) throw new Error('Photo must be JPG/PNG/WebP under 2 MB');
+          const path = `${crypto.randomUUID()}/photo.${f.type.split('/')[1].replace('jpeg', 'jpg')}`;
+          const { error } = await sb.storage.from('photos').upload(path, f, { contentType: f.type }); if (error) throw error;
+          row.photo_path = path;
+        }
+        const { error } = await sb.from('employees').insert(row); if (error) throw error;
+        $('form').reset(); toggle(); resetAv(); msg('Submitted ✔ Thank you!', 1);
+      } catch (err) { msg(err.message || 'Something went wrong', 0) }
+      $('go').disabled = false;
+    };
+  </script>
+<script>
+document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{
+  e.preventDefault();
+  document.querySelectorAll('nav a').forEach(x=>x.classList.remove('on'));a.classList.add('on');
+  const id=a.getAttribute('href').slice(1),t=id&&document.getElementById(id);
+  if(t){t.scrollIntoView({behavior:'smooth',block:'start'});t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash')}
+  else window.scrollTo({top:0,behavior:'smooth'});
+}));
+</script>
+</body>
+
+</html>
