@@ -73,7 +73,7 @@
                 <option>4</option>
                 <option>5</option>
               </select></label>
-            <span class="sp"></span><b id="count"></b><button id="exp">⬇ Export CSV</button>
+            <span class="sp"></span><b id="count"></b><button id="add">➕ Add employee</button><button id="exp">⬇ Export CSV</button>
           </div>
           <div class="tw">
             <table>
@@ -85,14 +85,57 @@
       </div>
     </main>
   </div>
+  <dialog id="emod">
+    <form id="ef">
+      <h2 id="etitle">Add employee</h2>
+      <div class="fields">
+        <label>Full name<input id="e_name" required></label>
+        <label>Date of birth<input id="e_dob" type="date" required></label>
+        <label>Phone<input id="e_phone" inputmode="numeric" pattern="\d{10}" maxlength="10" required></label>
+        <label>Email<input id="e_email" type="email" required></label>
+        <label>Account number<input id="e_acc_number" inputmode="numeric" pattern="\d{9,18}" required></label>
+        <label>IFSC code<input id="e_ifsc" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" maxlength="11" required></label>
+        <label>UAN number<input id="e_uan" inputmode="numeric" pattern="\d{12}" maxlength="12" required></label>
+        <label>Aadhaar number<input id="e_aadhaar" inputmode="numeric" pattern="\d{12}" maxlength="12" required></label>
+        <label>Date of joining<input id="e_doj" type="date" required></label>
+        <label>Resignation date<input id="e_resignation_date" type="date"></label>
+        <label>Designation<input id="e_designation" required></label>
+        <label>Package / CTC (₹ per year)<input id="e_package_amount" type="number" min="0" step="0.01" required></label>
+        <label>Employment type<select id="e_emp_type" required><option value="">Select</option><option>Intern</option><option>Full-time</option></select></label>
+        <label>Work mode<select id="e_work_mode" required><option value="">Select</option><option value="Hybrid">Hybrid</option><option value="WFO">Work from office</option><option value="WFH">Work from home</option></select></label>
+        <label>Office days / week (Hybrid)<select id="e_hybrid_days"><option value="">Select</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+        <label>Photo (optional, max 2 MB)<input id="e_photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
+      </div>
+      <div class="mact"><span id="emsg"></span><span class="sp"></span>
+        <button type="button" class="soft" id="ecancel">Cancel</button><button id="esave">Save</button></div>
+    </form>
+  </dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script>
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY), $ = id => document.getElementById(id); let rows = [], all = [], subscribed = false;
-    const COLS = [['name', 'Name'], ['dob', 'DOB'], ['doj', 'DOJ'], ['acc_number', 'Account No.'], ['uan', 'UAN'], ['aadhaar', 'Aadhaar'], ['ifsc', 'IFSC'], ['phone', 'Phone'], ['email', 'Email'], ['emp_type', 'Type'], ['designation', 'Designation'], ['package_amount', 'Package (₹)'], ['fixed_salary', 'Fixed salary (₹)'], ['fixed_salary', 'Fixed salary (₹/month)'], ['resignation_date', 'Resignation date'], ['work_mode', 'Work mode'], ['hybrid_days', 'Office days']];
+    // const COLS = [['name', 'Name'], ['dob', 'DOB'], ['doj', 'DOJ'], ['acc_number', 'Account No.'], ['uan', 'UAN'], ['aadhaar', 'Aadhaar'], ['ifsc', 'IFSC'], ['phone', 'Phone'], ['email', 'Email'], ['emp_type', 'Type'], ['designation', 'Designation'], ['package_amount', 'Package (₹)'], ['fixed_salary', 'Fixed salary (₹)'], ['fixed_salary', 'Fixed salary (₹/month)'], ['resignation_date', 'Resignation date'], ['work_mode', 'Work mode'], ['hybrid_days', 'Office days']];
+   const COLS = [
+  ['name', 'Name'],
+  ['dob', 'DOB'],
+  ['doj', 'DOJ'],
+  ['acc_number', 'Account No.'],
+  ['uan', 'UAN'],
+  ['aadhaar', 'Aadhaar'],
+  ['ifsc', 'IFSC'],
+  ['phone', 'Phone'],
+  ['email', 'Email'],
+  ['emp_type', 'Type'],
+  ['designation', 'Designation'],
+  ['package_amount', 'Package (₹)'],
+  ['resignation_date', 'Resignation date'],
+  ['work_mode', 'Work mode'],
+  ['hybrid_days', 'Office days']
+];
+   
     const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const show = on => { $('login').hidden = on; $('dash').hidden = !on; $('out').hidden = !on };
-    $('th').innerHTML = '<tr>' + COLS.map(c => `<th>${c[1]}</th>`).join('') + '<th>Photo</th><th></th></tr>';
+    $('th').innerHTML = '<tr><th>Sl No</th>' + COLS.map(c => `<th>${c[1]}</th>`).join('') + '<th>Photo</th><th>Actions</th></tr>';
     const h = new Date().getHours(); $('hi').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
     // async function gate(){
     //   const{data:{session}}=await sb.auth.getSession();if(!session)return show(false);
@@ -228,13 +271,35 @@
 
       draw();
     }
+function filtered() {
+  const q = $('q').value.toLowerCase().trim();
+  const t = $('t').value;
+  const m = $('m').value;
+  const d = $('h').value;
+
+  return rows.filter(r =>
+    (!t || r.emp_type === t) &&
+    (!m || r.work_mode === m) &&
+    (!d || String(r.hybrid_days) === d) &&
+    (!q ||
+      ((r.name || '') +
+       (r.email || '') +
+       (r.phone || ''))
+      .toLowerCase()
+      .includes(q)
+    )
+  );
+}
+
+
+
 
     function draw() {
       const fr = filtered(); $('count').textContent = fr.length + ' of ' + rows.length;
       $('s1').textContent = rows.length; $('s2').textContent = rows.filter(r => r.emp_type === 'Full-time').length;
       $('s3').textContent = rows.filter(r => r.emp_type === 'Intern').length; $('s4').textContent = rows.filter(r => r.work_mode === 'Hybrid').length;
-      $('tb').innerHTML = fr.map(r => '<tr>' + COLS.map(([k]) => `<td>${esc(r[k])}</td>`).join('') +
-        `<td>${r.photo_path ? `<button class="soft" data-dl="${r.id}">⬇ Download</button>` : '—'}</td><td><button class="danger" data-del="${r.id}">Delete</button></td></tr>`).join('');
+      $('tb').innerHTML = fr.map((r, i) => '<tr><td>' + (i + 1) + '</td>' + COLS.map(([k]) => `<td>${esc(r[k])}</td>`).join('') +
+        `<td>${r.photo_path ? `<button class="soft" data-dl="${r.id}">⬇ Download</button>` : '—'}</td><td class="acts"><button class="soft" data-edit="${r.id}">✏️ Edit</button> <button class="danger" data-del="${r.id}">Delete</button></td></tr>`).join('');
     }
     ['q', 't', 'm', 'h'].forEach(i => $(i).oninput = draw);
     $('tb').onclick = async e => {
@@ -258,6 +323,58 @@
     };
     gate();
   </script>
+<script>
+// ---- Create / Edit employee (admin) ----
+(() => {
+  const EF = ['name','dob','doj','phone','email','acc_number','ifsc','uan','aadhaar','designation','package_amount','resignation_date','emp_type','work_mode','hybrid_days'];
+  const e$ = id => document.getElementById('e_' + id);
+  let editId = null;
+  const emsg = (t, ok) => { $('emsg').textContent = t; $('emsg').className = ok ? 'ok' : 'err' };
+  const tg = () => { e$('hybrid_days').required = e$('work_mode').value === 'Hybrid' };
+  e$('work_mode').onchange = tg;
+
+  function openModal(r) {
+    editId = r ? r.id : null;
+    $('etitle').textContent = r ? 'Edit employee' : 'Add employee';
+    $('esave').textContent = r ? 'Update' : 'Create';
+    $('ef').reset(); emsg('');
+    EF.forEach(k => e$(k).value = r && r[k] != null ? r[k] : '');
+    tg(); $('emod').showModal();
+  }
+  $('add').onclick = () => openModal(null);
+  $('ecancel').onclick = () => $('emod').close();
+  $('tb').addEventListener('click', e => {
+    const id = e.target.dataset.edit; if (!id) return;
+    const r = rows.find(x => x.id === id); if (r) openModal(r);
+  });
+
+  $('ef').onsubmit = async e => {
+    e.preventDefault(); $('esave').disabled = true; emsg('Saving…', 1);
+    try {
+      const row = {}; EF.forEach(k => row[k] = e$(k).value.trim() || null);
+      row.package_amount = +row.package_amount;
+      row.email = row.email.toLowerCase(); row.ifsc = row.ifsc.toUpperCase();
+      row.hybrid_days = row.work_mode === 'Hybrid' ? +row.hybrid_days : null;
+      const f = e$('photo').files[0];
+      if (f) {
+        if (!['image/jpeg','image/png','image/webp'].includes(f.type) || f.size > 2097152) throw new Error('Photo must be JPG/PNG/WebP under 2 MB');
+        const path = `${crypto.randomUUID()}/photo.${f.type.split('/')[1].replace('jpeg','jpg')}`;
+        const { error } = await sb.storage.from('photos').upload(path, f, { contentType: f.type }); if (error) throw error;
+        row.photo_path = path;
+      }
+      if (editId) {
+        const { data, error } = await sb.from('employees').update(row).eq('id', editId).select();
+        if (error) throw error;
+        if (!data || !data.length) throw new Error('Update was blocked. Run migration-admin-update.sql in Supabase SQL Editor.');
+      } else {
+        const { error } = await sb.from('employees').insert(row); if (error) throw error;
+      }
+      $('emod').close(); await load();
+    } catch (err) { emsg(err.message || 'Something went wrong', 0) }
+    $('esave').disabled = false;
+  };
+})();
+</script>
 <script>
 document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{
   e.preventDefault();

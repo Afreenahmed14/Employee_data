@@ -570,3 +570,22 @@ body.portal #msg.err { background: #ffe8eb }
     body.portal #go { width: 100%; margin-bottom: 12px }
     body.portal #msg { margin-left: 0; display: block }
 }
+
+/* admin: add / edit employee modal */
+dialog#emod {
+    border: 0;
+    border-radius: 22px;
+    padding: 26px;
+    width: min(760px, 94vw);
+    max-height: 92vh;
+    overflow: auto;
+    background: #fffdfb;
+    color: var(--ink);
+    box-shadow: 0 30px 70px #2a1a6a55
+}
+dialog#emod::backdrop { background: #231a4a66; backdrop-filter: blur(3px) }
+dialog#emod h2 { font-size: 20px; margin-bottom: 18px }
+.mact { display: flex; align-items: center; gap: 10px; margin-top: 20px }
+.mact button.soft { padding: 11px 18px }
+.acts { white-space: nowrap }
+#add { margin-right: 8px }
