@@ -8,16 +8,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
+<body class="portal">
   <div class="app">
-    <aside class="side">
+    <!-- <aside class="side">
       <div class="brand"><span class="logo">👥</span>TeamPortal</div>
       <nav><a class="on" href="#">🏠 My Details</a><a href="#photo">📷 Photo</a><a href="#work">💼 Work</a><a
           href="#bank">🏦 Bank &amp; IDs</a></nav>
       <div class="promo"><b>No login needed ✨</b>
         <p>Fill in your details and submit. Only HR can see them.</p>
       </div>
-    </aside>
+    </aside> -->
     <main>
       <header class="head">
         <div>
@@ -94,7 +94,25 @@
   <script src="config.js"></script>
   <script>
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY), $ = id => document.getElementById(id);
-    const FIELDS = ['name', 'dob', 'doj', 'phone', 'email', 'acc_number', 'ifsc', 'uan', 'aadhaar', 'designation', 'package_amount', 'fixed_salary', 'fixed_salary', 'resignation_date', 'emp_type', 'work_mode', 'hybrid_days'];
+    // const FIELDS = ['name', 'dob', 'doj', 'phone', 'email', 'acc_number', 'ifsc', 'uan', 'aadhaar', 'designation', 'package_amount', 'fixed_salary', 'fixed_salary', 'resignation_date', 'emp_type', 'work_mode', 'hybrid_days'];
+
+    const FIELDS = [
+  'name',
+  'dob',
+  'doj',
+  'phone',
+  'email',
+  'acc_number',
+  'ifsc',
+  'uan',
+  'aadhaar',
+  'designation',
+  'package_amount',
+  'resignation_date',
+  'emp_type',
+  'work_mode',
+  'hybrid_days'
+];
     const msg = (t, ok) => { $('msg').textContent = t; $('msg').className = ok ? 'ok' : 'err' };
     const h = new Date().getHours(); $('hi').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
     const toggle = () => { $('hybrid_days').required = $('work_mode').value === 'Hybrid' }; $('work_mode').onchange = toggle;
@@ -103,7 +121,8 @@
     $('form').onsubmit = async e => {
       e.preventDefault(); $('go').disabled = true; msg('Submitting…', 1);
       try {
-        const row = {}; FIELDS.forEach(k => row[k] = $(k).value.trim() || null); row.package_amount = +row.package_amount; row.fixed_salary = +row.fixed_salary; row.fixed_salary = +row.fixed_salary;
+        const row = {}; FIELDS.forEach(k => row[k] = $(k).value.trim() || null); row.package_amount = +row.package_amount; 
+        // row.fixed_salary = +row.fixed_salary; row.fixed_salary = +row.fixed_salary;
         row.email = row.email.toLowerCase(); row.ifsc = row.ifsc.toUpperCase();
         row.hybrid_days = row.work_mode === 'Hybrid' ? +row.hybrid_days : null;
         const f = $('photoIn').files[0];
@@ -119,7 +138,7 @@
       $('go').disabled = false;
     };
   </script>
-<script>
+<!-- <script>
 document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{
   e.preventDefault();
   document.querySelectorAll('nav a').forEach(x=>x.classList.remove('on'));a.classList.add('on');
@@ -127,7 +146,7 @@ document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{
   if(t){t.scrollIntoView({behavior:'smooth',block:'start'});t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash')}
   else window.scrollTo({top:0,behavior:'smooth'});
 }));
-</script>
+</script> -->
 </body>
 
 </html>

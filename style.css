@@ -392,3 +392,181 @@ nav a{cursor:pointer}
 section[id]{scroll-margin-top:22px}
 .flash{animation:flash 1.3s ease}
 @keyframes flash{0%,100%{box-shadow:0 10px 30px #5a3fb61a,0 2px 6px #5a3fb60d}30%{box-shadow:0 0 0 4px #7b5cf066,0 10px 30px #7b5cf044}}
+
+/* =====================================================
+   Employee portal (index.html) – sidebar-less layout
+   ===================================================== */
+
+/* Root-cause fix: the sidebar is commented out, so <main> was being
+   squeezed into the 230px sidebar column. Let it span the full width. */
+.app > main:only-child { grid-column: 1 / -1 }
+
+body.portal {
+    background:
+        radial-gradient(800px 480px at 95% -8%, #e2d6fb 0, transparent 60%),
+        radial-gradient(700px 520px at -8% 105%, #fcdccb 0, transparent 60%),
+        radial-gradient(500px 360px at 50% 50%, #fff6f0 0, transparent 70%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+body.portal .app {
+    display: block;
+    max-width: 1020px;
+    padding: 32px 22px 56px;
+}
+
+/* Hero header */
+body.portal .head {
+    position: relative;
+    overflow: hidden;
+    display: block;
+    margin: 0 0 26px;
+    padding: 34px 38px;
+    border-radius: 28px;
+    color: #fff;
+    background: linear-gradient(135deg, #7b5cf0 0%, #9b82f7 55%, #c08cf5 100%);
+    box-shadow: 0 18px 40px #7b5cf044, 0 4px 10px #7b5cf022;
+}
+body.portal .head::before,
+body.portal .head::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: #ffffff1f;
+    pointer-events: none;
+}
+body.portal .head::before { width: 260px; height: 260px; right: -70px; top: -110px }
+body.portal .head::after  { width: 160px; height: 160px; right: 120px; bottom: -90px; background: #ffffff14 }
+body.portal .head > * { position: relative; z-index: 1 }
+body.portal h1 {
+    font-size: clamp(26px, 4vw, 36px);
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+body.portal .head .sub {
+    margin-top: 8px;
+    max-width: 560px;
+    color: #f1ebff;
+    font-size: 15.5px;
+}
+
+/* Cards */
+body.portal .cards {
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 22px;
+    margin-bottom: 22px;
+}
+body.portal .card {
+    padding: 26px;
+    border: 1px solid #f1ebf8;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+body.portal .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px #5a3fb620, 0 3px 8px #5a3fb60f;
+}
+body.portal .card h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 20px;
+    padding-bottom: 14px;
+    font-size: 17px;
+    font-weight: 800;
+    border-bottom: 1px dashed #e6def5;
+}
+
+/* Fields */
+body.portal .fields {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px 14px;
+}
+body.portal label {
+    font-size: 12.5px;
+    letter-spacing: .01em;
+    color: #4b5070;
+}
+body.portal input,
+body.portal select {
+    width: 100%;
+    padding: 12px 14px;
+    background: #faf8ff;
+    border: 1.5px solid #e9e2f6;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+}
+body.portal input:hover,
+body.portal select:hover { border-color: #cdbff3 }
+body.portal input:focus,
+body.portal select:focus {
+    background: #fff;
+    border-color: var(--p);
+    box-shadow: 0 0 0 4px #7b5cf025;
+}
+body.portal input:user-invalid,
+body.portal select:user-invalid { border-color: #e5677a; background: #fff8f9 }
+
+/* Photo card */
+body.portal .photo { gap: 22px; flex-wrap: wrap }
+body.portal .photo label { flex: 1; min-width: 200px }
+body.portal .av {
+    width: 112px;
+    height: 112px;
+    font-size: 46px;
+    border: 4px solid #fff;
+    background: #efe8ff center/cover;
+    box-shadow: 0 0 0 3px #cbb9fa, 0 12px 26px #7b5cf040;
+}
+body.portal input[type=file] {
+    padding: 9px 10px;
+    border-style: dashed;
+    border-width: 2px;
+    border-color: #cbb9fa;
+    background: #f7f3ff;
+    cursor: pointer;
+    font-size: 13px;
+}
+body.portal input[type=file]::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--p), var(--p2));
+    box-shadow: 0 5px 12px #7b5cf044;
+}
+
+/* Submit */
+body.portal #go {
+    min-width: 220px;
+    padding: 15px 34px;
+    font-size: 16px;
+    border-radius: 16px;
+    letter-spacing: .01em;
+    box-shadow: 0 12px 26px #7b5cf055;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s;
+}
+body.portal #go:hover { transform: translateY(-2px); box-shadow: 0 16px 32px #7b5cf066 }
+body.portal #go:active { transform: translateY(0) }
+body.portal #go:disabled { opacity: .65; cursor: progress; transform: none }
+body.portal #msg { margin-left: 14px; font-size: 15px; vertical-align: middle }
+body.portal #msg.ok,
+body.portal #msg.err {
+    display: inline-block;
+    padding: 9px 16px;
+    border-radius: 12px;
+}
+body.portal #msg.ok  { background: #e3f7ec }
+body.portal #msg.err { background: #ffe8eb }
+
+@media (max-width: 640px) {
+    body.portal .app { padding: 16px 14px 40px }
+    body.portal .head { padding: 26px 22px; border-radius: 22px }
+    body.portal .cards { grid-template-columns: 1fr }
+    body.portal .card { padding: 20px }
+    body.portal #go { width: 100%; margin-bottom: 12px }
+    body.portal #msg { margin-left: 0; display: block }
+}
