@@ -39,6 +39,7 @@
           <section class="card">
             <h2>🧑 Personal</h2>
             <div class="fields">
+              <label>Employee ID<input id="employee_id" required></label>
               <label>Full name<input id="name" required></label><label>Date of birth<input id="dob" type="date"
                   required></label>
               <label>Phone<input id="phone" inputmode="numeric" pattern="\d{10}" maxlength="10" required></label>
@@ -86,6 +87,20 @@
             </div>
           </section>
         </div>
+        <div class="cards">
+          <section class="card" id="laptop">
+            <h2>💻 Laptop &amp; Assets</h2>
+            <div class="fields">
+              <label>Laptop model<input id="laptop_model" placeholder="e.g. Dell Latitude 5420" required></label>
+              <label>Any issue with assets?<select id="asset_issue" required>
+                  <option value="">Select</option>
+                  <option>No</option>
+                  <option>Yes</option>
+                </select></label>
+              <label id="aid" class="wide" hidden>Describe the issue<textarea id="asset_issue_desc" rows="3" placeholder="Describe the issue briefly"></textarea></label>
+            </div>
+          </section>
+        </div>
         <button id="go">Submit details</button> <span id="msg"></span>
       </form>
     </main>
@@ -97,6 +112,7 @@
     // const FIELDS = ['name', 'dob', 'doj', 'phone', 'email', 'acc_number', 'ifsc', 'uan', 'aadhaar', 'designation', 'package_amount', 'fixed_salary', 'fixed_salary', 'resignation_date', 'emp_type', 'work_mode', 'hybrid_days'];
 
     const FIELDS = [
+  'employee_id',
   'name',
   'dob',
   'doj',
@@ -111,11 +127,15 @@
   'resignation_date',
   'emp_type',
   'work_mode',
-  'hybrid_days'
+  'hybrid_days',
+  'laptop_model',
+  'asset_issue',
+  'asset_issue_desc'
 ];
     const msg = (t, ok) => { $('msg').textContent = t; $('msg').className = ok ? 'ok' : 'err' };
     const h = new Date().getHours(); $('hi').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
     const toggle = () => { $('hybrid_days').required = $('work_mode').value === 'Hybrid' }; $('work_mode').onchange = toggle;
+    const toggleIssue = () => { const y = $('asset_issue').value === 'Yes'; $('aid').hidden = !y; $('asset_issue_desc').required = y; if (!y) $('asset_issue_desc').value = '' }; $('asset_issue').onchange = toggleIssue;
     const resetAv = () => { $('av').style.backgroundImage = ''; $('av').textContent = '🙂' };
     $('photoIn').onchange = e => { const f = e.target.files[0]; if (f) { $('av').style.backgroundImage = `url(${URL.createObjectURL(f)})`; $('av').textContent = '' } };
     $('form').onsubmit = async e => {
@@ -133,7 +153,7 @@
           row.photo_path = path;
         }
         const { error } = await sb.from('employees').insert(row); if (error) throw error;
-        $('form').reset(); toggle(); resetAv(); msg('Submitted ✔ Thank you!', 1);
+        $('form').reset(); toggle(); toggleIssue(); resetAv(); msg('Submitted ✔ Thank you!', 1);
       } catch (err) { msg(err.message || 'Something went wrong', 0) }
       $('go').disabled = false;
     };

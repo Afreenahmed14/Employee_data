@@ -53,7 +53,7 @@
         </div>
         <section class="card" id="list">
           <div class="bar">
-            <label>Search<input id="q" placeholder="Name, email, phone"></label>
+            <label>Search<input id="q" placeholder="Name, ID, email, phone"></label>
             <label>Type<select id="t">
                 <option value="">All</option>
                 <option>Intern</option>
@@ -73,7 +73,14 @@
                 <option>4</option>
                 <option>5</option>
               </select></label>
-            <span class="sp"></span><b id="count"></b><button id="add">➕ Add employee</button><button id="exp">⬇ Export CSV</button>
+            <span class="sp"></span><b id="count"></b>
+            <div class="colpick"><button id="colbtn" type="button" class="soft">🗂 Columns <span id="colcnt"></span></button>
+              <div id="colpanel" hidden>
+                <p>Click columns in the order you want them. Numbers show the order.</p>
+                <div class="cpa"><button type="button" class="soft" id="cpall">Select all</button><button type="button" class="soft" id="cpnone">Clear</button><button type="button" class="soft" id="cpreset">Reset</button></div>
+                <div id="collist"></div>
+              </div>
+            </div><button id="add">➕ Add employee</button><button id="exp">⬇ Export CSV</button>
           </div>
           <div class="tw">
             <table>
@@ -89,6 +96,7 @@
     <form id="ef">
       <h2 id="etitle">Add employee</h2>
       <div class="fields">
+        <label>Employee ID<input id="e_employee_id" required></label>
         <label>Full name<input id="e_name" required></label>
         <label>Date of birth<input id="e_dob" type="date" required></label>
         <label>Phone<input id="e_phone" inputmode="numeric" pattern="\d{10}" maxlength="10" required></label>
@@ -104,6 +112,9 @@
         <label>Employment type<select id="e_emp_type" required><option value="">Select</option><option>Intern</option><option>Full-time</option></select></label>
         <label>Work mode<select id="e_work_mode" required><option value="">Select</option><option value="Hybrid">Hybrid</option><option value="WFO">Work from office</option><option value="WFH">Work from home</option></select></label>
         <label>Office days / week (Hybrid)<select id="e_hybrid_days"><option value="">Select</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+        <label>Laptop model<input id="e_laptop_model"></label>
+        <label>Any issue with assets?<select id="e_asset_issue"><option value="">Select</option><option>No</option><option>Yes</option></select></label>
+        <label class="wide">Issue description<textarea id="e_asset_issue_desc" rows="3" placeholder="Describe the issue briefly"></textarea></label>
         <label>Photo (optional, max 2 MB)<input id="e_photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
       </div>
       <div class="mact"><span id="emsg"></span><span class="sp"></span>
@@ -116,6 +127,7 @@
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY), $ = id => document.getElementById(id); let rows = [], all = [], subscribed = false;
     // const COLS = [['name', 'Name'], ['dob', 'DOB'], ['doj', 'DOJ'], ['acc_number', 'Account No.'], ['uan', 'UAN'], ['aadhaar', 'Aadhaar'], ['ifsc', 'IFSC'], ['phone', 'Phone'], ['email', 'Email'], ['emp_type', 'Type'], ['designation', 'Designation'], ['package_amount', 'Package (₹)'], ['fixed_salary', 'Fixed salary (₹)'], ['fixed_salary', 'Fixed salary (₹/month)'], ['resignation_date', 'Resignation date'], ['work_mode', 'Work mode'], ['hybrid_days', 'Office days']];
    const COLS = [
+  ['employee_id', 'Employee ID'],
   ['name', 'Name'],
   ['dob', 'DOB'],
   ['doj', 'DOJ'],
@@ -130,12 +142,35 @@
   ['package_amount', 'Package (₹)'],
   ['resignation_date', 'Resignation date'],
   ['work_mode', 'Work mode'],
-  ['hybrid_days', 'Office days']
+  ['hybrid_days', 'Office days'],
+  ['laptop_model', 'Laptop model'],
+  ['asset_issue', 'Asset issue?'],
+  ['asset_issue_desc', 'Issue description']
 ];
+    const LBL = Object.fromEntries(COLS);
+    const DEFAULT_SEL = COLS.map(c => c[0]);
+    let sel; try { sel = JSON.parse(localStorage.getItem('selCols')); } catch (e) { }
+    sel = Array.isArray(sel) ? sel.filter(k => LBL[k]) : DEFAULT_SEL.slice();
+    const saveSel = () => { try { localStorage.setItem('selCols', JSON.stringify(sel)) } catch (e) { } };
    
+    const cell = (k, r) => {
+      const v = r[k], e = esc(v);
+      if (v == null || v === '') return '<span class="nil">—</span>';
+      if (k === 'name') return `<div class="who"><span class="av2">${esc(String(v).trim().charAt(0).toUpperCase())}</span><b>${e}</b></div>`;
+      if (k === 'employee_id') return `<span class="chip">${e}</span>`;
+      if (k === 'emp_type') return `<span class="bdg ${v === 'Full-time' ? 'b-ft' : 'b-in'}">${e}</span>`;
+      if (k === 'work_mode') return `<span class="bdg b-${esc(v).toLowerCase()}">${e}</span>`;
+      if (k === 'asset_issue') return `<span class="bdg ${v === 'Yes' ? 'b-bad' : 'b-ok'}">${v === 'Yes' ? '⚠ Yes' : '✓ No'}</span>`;
+      if (k === 'asset_issue_desc') return `<p class="para" title="${e}">${e}</p>`;
+      if (k === 'package_amount') return '₹' + Number(v).toLocaleString('en-IN');
+      if (k === 'email') return `<span class="mail">${e}</span>`;
+      return e;
+    };
     const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const show = on => { $('login').hidden = on; $('dash').hidden = !on; $('out').hidden = !on };
-    $('th').innerHTML = '<tr><th>Sl No</th>' + COLS.map(c => `<th>${c[1]}</th>`).join('') + '<th>Photo</th><th>Actions</th></tr>';
+    let sortKey = 'name', sortDir = 1;
+    const drawHead = () => { $('th').innerHTML = '<tr><th>Sl No</th>' + sel.map(k => `<th data-sort="${k}" style="cursor:pointer" title="Click to sort">${LBL[k]}${k === sortKey ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th>Photo</th><th>Actions</th></tr>'; };
+    $('th').onclick = e => { const k = e.target.dataset.sort; if (!k) return; sortDir = k === sortKey ? -sortDir : 1; sortKey = k; draw() };
     const h = new Date().getHours(); $('hi').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
     // async function gate(){
     //   const{data:{session}}=await sb.auth.getSession();if(!session)return show(false);
@@ -282,7 +317,7 @@ function filtered() {
     (!m || r.work_mode === m) &&
     (!d || String(r.hybrid_days) === d) &&
     (!q ||
-      ((r.name || '') +
+      ((r.name || '') + (r.employee_id || '') +
        (r.email || '') +
        (r.phone || ''))
       .toLowerCase()
@@ -295,10 +330,11 @@ function filtered() {
 
 
     function draw() {
-      const fr = filtered(); $('count').textContent = fr.length + ' of ' + rows.length;
+      drawHead();
+      const fr = filtered().sort((a, b) => sortDir * String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? ''), undefined, { numeric: true, sensitivity: 'base' })); $('count').textContent = fr.length + ' of ' + rows.length;
       $('s1').textContent = rows.length; $('s2').textContent = rows.filter(r => r.emp_type === 'Full-time').length;
       $('s3').textContent = rows.filter(r => r.emp_type === 'Intern').length; $('s4').textContent = rows.filter(r => r.work_mode === 'Hybrid').length;
-      $('tb').innerHTML = fr.map((r, i) => '<tr><td>' + (i + 1) + '</td>' + COLS.map(([k]) => `<td>${esc(r[k])}</td>`).join('') +
+      $('tb').innerHTML = fr.map((r, i) => '<tr><td>' + (i + 1) + '</td>' + sel.map(k => `<td class="c-${k}">${cell(k, r)}</td>`).join('') +
         `<td>${r.photo_path ? `<button class="soft" data-dl="${r.id}">⬇ Download</button>` : '—'}</td><td class="acts"><button class="soft" data-edit="${r.id}">✏️ Edit</button> <button class="danger" data-del="${r.id}">Delete</button></td></tr>`).join('');
     }
     ['q', 't', 'm', 'h'].forEach(i => $(i).oninput = draw);
@@ -318,20 +354,42 @@ function filtered() {
     $('exp').onclick = () => {
       const txt = ['acc_number', 'uan', 'aadhaar', 'phone'];
       const q = v => { v = String(v ?? ''); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"' };
-      const lines = [COLS.map(c => q(c[1])).join(',')].concat(filtered().map(r => COLS.map(([k]) => txt.includes(k) ? '="' + (r[k] || '') + '"' : q(r[k])).join(',')));
+      if (!sel.length) return alert('Select at least one column first');
+      const lines = [sel.map(k => q(LBL[k])).join(',')].concat(filtered().sort((a, b) => sortDir * String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? ''), undefined, { numeric: true, sensitivity: 'base' })).map(r => sel.map(k => txt.includes(k) ? '="' + (r[k] || '') + '"' : q(r[k])).join(',')));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv' })); a.download = 'employees.csv'; a.click()
     };
+
+    // ---- Column picker: order of clicks = order of columns ----
+    function drawPicker() {
+      $('collist').innerHTML = COLS.map(([k, l]) => { const i = sel.indexOf(k); return `<button type="button" class="cp${i > -1 ? ' on' : ''}" data-col="${k}"><i>${i > -1 ? i + 1 : ''}</i>${l}</button>` }).join('');
+      $('colcnt').textContent = '(' + sel.length + '/' + COLS.length + ')';
+    }
+    const applySel = () => { saveSel(); drawPicker(); draw() };
+    $('colbtn').onclick = e => { e.stopPropagation(); $('colpanel').hidden = !$('colpanel').hidden };
+    $('colpanel').onclick = e => e.stopPropagation();
+    document.addEventListener('click', () => $('colpanel').hidden = true);
+    $('collist').onclick = e => {
+      const b = e.target.closest('[data-col]'); if (!b) return;
+      const k = b.dataset.col, i = sel.indexOf(k);
+      i > -1 ? sel.splice(i, 1) : sel.push(k); applySel();
+    };
+    $('cpall').onclick = () => { COLS.forEach(([k]) => sel.includes(k) || sel.push(k)); applySel() };
+    $('cpnone').onclick = () => { sel = []; applySel() };
+    $('cpreset').onclick = () => { sel = DEFAULT_SEL.slice(); applySel() };
+    drawPicker();
     gate();
   </script>
 <script>
 // ---- Create / Edit employee (admin) ----
 (() => {
-  const EF = ['name','dob','doj','phone','email','acc_number','ifsc','uan','aadhaar','designation','package_amount','resignation_date','emp_type','work_mode','hybrid_days'];
+  const EF = ['employee_id','laptop_model','asset_issue','asset_issue_desc','name','dob','doj','phone','email','acc_number','ifsc','uan','aadhaar','designation','package_amount','resignation_date','emp_type','work_mode','hybrid_days'];
   const e$ = id => document.getElementById('e_' + id);
   let editId = null;
   const emsg = (t, ok) => { $('emsg').textContent = t; $('emsg').className = ok ? 'ok' : 'err' };
   const tg = () => { e$('hybrid_days').required = e$('work_mode').value === 'Hybrid' };
   e$('work_mode').onchange = tg;
+  const ti = () => { e$('asset_issue_desc').required = e$('asset_issue').value === 'Yes' };
+  e$('asset_issue').onchange = ti;
 
   function openModal(r) {
     editId = r ? r.id : null;
@@ -339,7 +397,7 @@ function filtered() {
     $('esave').textContent = r ? 'Update' : 'Create';
     $('ef').reset(); emsg('');
     EF.forEach(k => e$(k).value = r && r[k] != null ? r[k] : '');
-    tg(); $('emod').showModal();
+    tg(); ti(); $('emod').showModal();
   }
   $('add').onclick = () => openModal(null);
   $('ecancel').onclick = () => $('emod').close();
@@ -355,6 +413,7 @@ function filtered() {
       row.package_amount = +row.package_amount;
       row.email = row.email.toLowerCase(); row.ifsc = row.ifsc.toUpperCase();
       row.hybrid_days = row.work_mode === 'Hybrid' ? +row.hybrid_days : null;
+      if (row.asset_issue !== 'Yes') row.asset_issue_desc = null;
       const f = e$('photo').files[0];
       if (f) {
         if (!['image/jpeg','image/png','image/webp'].includes(f.type) || f.size > 2097152) throw new Error('Photo must be JPG/PNG/WebP under 2 MB');

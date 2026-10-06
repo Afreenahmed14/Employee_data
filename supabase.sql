@@ -20,6 +20,10 @@ create table employees (
   fixed_salary numeric(12,2) check (fixed_salary >= 0),
   resignation_date date,
   fixed_salary numeric(12,2) check (fixed_salary >= 0),
+  employee_id text,
+  laptop_model text,
+  asset_issue text check (asset_issue in ('Yes','No')),
+  asset_issue_desc text,
   photo_path text,
   created_at timestamptz default now()
 );
